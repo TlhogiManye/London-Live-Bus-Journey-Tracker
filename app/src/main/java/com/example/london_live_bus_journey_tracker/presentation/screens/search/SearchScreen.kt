@@ -41,6 +41,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.london_live_bus_journey_tracker.R
@@ -55,6 +57,7 @@ import com.example.london_live_bus_journey_tracker.ui.theme.TextPrimary
 import com.example.london_live_bus_journey_tracker.ui.theme.TextSecondary
 import com.example.london_live_bus_journey_tracker.ui.theme.TextTertiary
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun SearchScreen(
     onBackClick: () -> Unit,
@@ -62,6 +65,7 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val fromFocusRequester = remember { FocusRequester() }
     val toFocusRequester = remember { FocusRequester() }
@@ -90,7 +94,12 @@ fun SearchScreen(
         color = MaterialTheme.colorScheme.background
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            SearchHeader(onBackClick = onBackClick)
+            SearchHeader(
+                onBackClick = {
+                    keyboardController?.hide()
+                    onBackClick()
+                }
+            )
 
             Spacer(modifier = Modifier.height(Spacing.default))
 

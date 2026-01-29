@@ -47,6 +47,8 @@ import com.example.london_live_bus_journey_tracker.ui.theme.LightGray
 import com.example.london_live_bus_journey_tracker.ui.theme.Spacing
 import com.example.london_live_bus_journey_tracker.ui.theme.TextPrimary
 import com.example.london_live_bus_journey_tracker.ui.theme.TextSecondary
+import BusListUiState
+import com.example.london_live_bus_journey_tracker.domain.model.BusArrivalItem
 
 @Composable
 fun BusListScreen(
