@@ -1,3 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">london-live-bus-journey-tracker</string>
+    <string name="app_name">London Bus Tracker</string>
+
+    <!-- Landing Screen -->
+    <string name="search_placeholder">Where to?</string>
+    <string name="history_header">History</string>
+    <string name="bus_via">Bus via %1$s</string>
+    <string name="minutes_short">Min</string>
+
+    <!-- Search Screen -->
+    <string name="search_address_title">Search Address</string>
+    <string name="label_from">From</string>
+    <string name="label_to">To</string>
+    <string name="recent_searches_header">Recent searches</string>
+    <string name="suggestions_header">Suggestions</string>
+    <string name="location_united_kingdom">United Kingdom</string>
+    <string name="content_description_back">Go back</string>
+    <string name="content_description_clear">Clear text</string>
+
+    <!-- Journey Screen -->
+    <string name="directions">Directions</string>
+    <string name="route_label">Rout %1$s</string>
+    <string name="no_routes_found">No routes found</string>
+
+    <!-- Bus List Screen -->
+    <string name="busses_for">Busses for:</string>
+    <string name="arriving_at">Arriving at %1$s</string>
+    <string name="no_busses_running">No busses Running\nfor this rout</string>
+    <string name="bus_number">Bus %1$s</string>
+    <string name="loading_buses">Loading buses…</string>
+
+    <!-- Trip/Tracking Screen -->
+    <string name="trip">Trip:</string>
+    <string name="next_stop">Next stop %1$s</string>
+    <string name="location_description">Location discription</string>
+
+    <!-- Common -->
+    <string name="loading">Loading…</string>
+    <string name="error_generic">Something went wrong</string>
+    <string name="retry">Retry</string>
 </resources>

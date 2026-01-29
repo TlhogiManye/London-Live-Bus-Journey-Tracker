@@ -1,0 +1,11 @@
+import com.example.london_live_bus_journey_tracker.domain.model.JourneyOption
+
+data class JourneyResultsUiState(
+    val fromId: String = "",
+    val fromName: String = "",
+    val toId: String = "",
+    val toName: String = "",
+    val journeyOptions: List<JourneyOption> = emptyList(),
+    val isLoading: Boolean = true,
+    val errorMessage: String? = null
+)
