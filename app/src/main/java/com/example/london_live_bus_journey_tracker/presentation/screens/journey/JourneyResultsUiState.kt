@@ -1,5 +1,10 @@
+package com.example.london_live_bus_journey_tracker.presentation.screens.journey
+
 import com.example.london_live_bus_journey_tracker.domain.model.JourneyOption
 
+/**
+ * UI state for the Journey Results screen.
+ */
 data class JourneyResultsUiState(
     val fromId: String = "",
     val fromName: String = "",

@@ -1,6 +1,5 @@
 package com.example.london_live_bus_journey_tracker.presentation.screens.journey
 
-import JourneyResultsUiState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column

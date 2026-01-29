@@ -3,6 +3,9 @@ package com.example.london_live_bus_journey_tracker.presentation.screens.trackin
 import com.example.london_live_bus_journey_tracker.domain.model.TrackingBusPosition
 import com.example.london_live_bus_journey_tracker.domain.model.TrackingRouteStop
 
+/**
+ * UI state for the Tracking screen.
+ */
 data class TrackingUiState(
     val lineId: String = "",
     val lineName: String = "",
@@ -15,3 +18,7 @@ data class TrackingUiState(
     val isLoading: Boolean = true,
     val errorMessage: String? = null
 )
+
+/**
+ * Inferred bus position for UI display.
+ */

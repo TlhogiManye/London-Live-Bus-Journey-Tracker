@@ -3,43 +3,44 @@ package com.example.london_live_bus_journey_tracker.presentation.screens.trackin
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.london_live_bus_journey_tracker.domain.common.Result
+import com.example.london_live_bus_journey_tracker.domain.model.BusPosition
 import com.example.london_live_bus_journey_tracker.domain.model.TrackingBusPosition
 import com.example.london_live_bus_journey_tracker.domain.model.TrackingRouteStop
+import com.example.london_live_bus_journey_tracker.domain.usecase.TrackBusPositionUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-
-
-
-
-
+/**
+ * ViewModel for the Tracking screen.
+ *
+ * Tracks a specific bus in real-time using Virtual GPS.
+ */
 @HiltViewModel
 class TrackingViewModel @Inject constructor(
+    private val trackBusPositionUseCase: TrackBusPositionUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TrackingUiState())
     val uiState: StateFlow<TrackingUiState> = _uiState.asStateFlow()
 
-    private var pollingJob: Job? = null
-    private val routeStopsCache = mutableListOf<TrackingRouteStop>()
+    private var trackingJob: Job? = null
+    private val lineId: String = savedStateHandle.get<String>("lineId") ?: ""
+    private val vehicleId: String = savedStateHandle.get<String>("vehicleId") ?: ""
 
     init {
-        val lineId = savedStateHandle.get<String>("lineId") ?: ""
         val lineName = savedStateHandle.get<String>("lineName") ?: ""
-        val vehicleId = savedStateHandle.get<String>("vehicleId") ?: ""
         val destinationName = savedStateHandle.get<String>("destinationName") ?: ""
 
-        _uiState.update { state ->
-            state.copy(
+        _uiState.update {
+            it.copy(
                 lineId = lineId,
                 lineName = lineName,
                 vehicleId = vehicleId,
@@ -47,124 +48,89 @@ class TrackingViewModel @Inject constructor(
             )
         }
 
-        loadRouteSequence()
+        loadRouteAndStartTracking()
     }
 
-    private fun loadRouteSequence() {
+    private fun loadRouteAndStartTracking() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-            try {
-                delay(500)
+            // First load the route sequence
+            when (val routeResult = trackBusPositionUseCase.getRouteSequence(lineId)) {
+                is Result.Success -> {
+                    val routeStops = routeResult.data.stops.map { stop ->
+                        TrackingRouteStop(
+                            naptanId = stop.naptanId,
+                            name = stop.name,
+                            lat = stop.lat,
+                            lon = stop.lon,
+                            sequence = stop.sequence,
+                            isCurrentStop = false
+                        )
+                    }
 
-                // Mock route sequence data
-                val mockStops = listOf(
-                    TrackingRouteStop("490000001A", "Victoria Station", 51.4965, -0.1447, 1),
-                    TrackingRouteStop("490000002B", "Pimlico", 51.4893, -0.1334, 2),
-                    TrackingRouteStop("490000003C", "Westminster", 51.5014, -0.1248, 3),
-                    TrackingRouteStop("490000004D", "Trafalgar Square", 51.5080, -0.1281, 4),
-                    TrackingRouteStop("490000005E", "Charing Cross", 51.5074, -0.1278, 5),
-                    TrackingRouteStop("490000006F", "Oxford Circus", 51.5152, -0.1418, 6),
-                    TrackingRouteStop("490000007G", "Warren Street", 51.5247, -0.1384, 7),
-                    TrackingRouteStop("490000008H", "Euston Station", 51.5282, -0.1337, 8)
-                )
+                    _uiState.update { it.copy(routeStops = routeStops, isLoading = false) }
 
-                routeStopsCache.clear()
-                routeStopsCache.addAll(mockStops)
-
-                _uiState.update { state ->
-                    state.copy(
-                        routeStops = mockStops,
-                        isLoading = false
-                    )
+                    // Start collecting position updates
+                    startTracking()
                 }
-
-                startPolling()
-
-            } catch (e: Exception) {
-                _uiState.update { state ->
-                    state.copy(
-                        isLoading = false,
-                        errorMessage = "Failed to load route"
-                    )
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = routeResult.message)
+                    }
                 }
             }
         }
     }
 
-    private fun startPolling() {
-        pollingJob?.cancel()
-        pollingJob = viewModelScope.launch {
-            while (isActive) {
-                fetchBusPosition()
-                delay(POLLING_INTERVAL_MS)
-            }
+    private fun startTracking() {
+        trackingJob?.cancel()
+        trackingJob = viewModelScope.launch {
+            trackBusPositionUseCase(vehicleId = vehicleId, lineId = lineId)
+                .collect { result ->
+                    when (result) {
+                        is Result.Success -> updateBusPosition(result.data)
+                        is Result.Error -> {
+                            // Keep last known position on individual failures
+                        }
+                    }
+                }
         }
     }
 
-    private suspend fun fetchBusPosition() {
-        try {
-            delay(300)
+    private fun updateBusPosition(position: BusPosition) {
+        val currentStops = _uiState.value.routeStops
 
-            // Mock arrival data - simulating bus at Trafalgar Square
-            val mockNaptanId = "490000004D"
-            val mockTimeToStation = 5
+        val updatedStops = currentStops.map { stop ->
+            stop.copy(isCurrentStop = stop.name == position.currentStopName)
+        }
 
-            // Virtual GPS: Find the stop coordinates from our route sequence
-            val matchedStop = routeStopsCache.find { it.naptanId == mockNaptanId }
-
-            if (matchedStop != null) {
-                val busPosition = TrackingBusPosition(
-                    lat = matchedStop.lat,
-                    lon = matchedStop.lon,
-                    naptanId = matchedStop.naptanId,
-                    stopName = matchedStop.name
-                )
-
-                // Find next stop in sequence
-                val currentIndex = routeStopsCache.indexOfFirst { it.naptanId == mockNaptanId }
-                val nextStop = if (currentIndex >= 0 && currentIndex < routeStopsCache.size - 1) {
-                    routeStopsCache[currentIndex + 1]
-                } else {
-                    null
-                }
-
-                // Update route stops with current position marker
-                val updatedStops = routeStopsCache.map { stop ->
-                    stop.copy(isCurrentStop = stop.naptanId == mockNaptanId)
-                }
-
-                _uiState.update { state ->
-                    state.copy(
-                        busPosition = busPosition,
-                        routeStops = updatedStops,
-                        nextStopName = nextStop?.name ?: state.destinationName,
-                        timeToNextStop = mockTimeToStation,
-                        errorMessage = null
-                    )
-                }
-            }
-
-        } catch (e: Exception) {
-            // Continue polling even if one request fails
+        _uiState.update { state ->
+            state.copy(
+                busPosition = TrackingBusPosition(
+                    lat = position.lat,
+                    lon = position.lon,
+                    stopName = position.currentStopName
+                ),
+                routeStops = updatedStops,
+                nextStopName = position.nextStopName ?: state.destinationName,
+                timeToNextStop = position.timeToNextStopSeconds / 60,
+                errorMessage = null
+            )
         }
     }
 
     fun stopPolling() {
-        pollingJob?.cancel()
-        pollingJob = null
+        trackingJob?.cancel()
+        trackingJob = null
     }
 
     fun retry() {
-        loadRouteSequence()
+        loadRouteAndStartTracking()
     }
 
     override fun onCleared() {
         super.onCleared()
         stopPolling()
-    }
-
-    companion object {
-        private const val POLLING_INTERVAL_MS = 30_000L
     }
 }

@@ -6,6 +6,5 @@ data class RecentSearch(
     val toName: String,
     val routeNumber: String,
     val viaDescription: String,
-    val durationMinutes: Int,
-    val timestamp: Long = System.currentTimeMillis()
+    val durationMinutes: Int
 )

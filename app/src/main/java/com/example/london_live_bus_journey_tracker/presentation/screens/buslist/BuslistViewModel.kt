@@ -1,10 +1,10 @@
 package com.example.london_live_bus_journey_tracker.presentation.screens.buslist
 
-import BusListUiState
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.london_live_bus_journey_tracker.domain.model.BusArrivalItem
+import com.example.london_live_bus_journey_tracker.domain.common.Result
+import com.example.london_live_bus_journey_tracker.domain.usecase.GetBusArrivalsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -16,10 +16,14 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-
-
+/**
+ * ViewModel for the Bus List screen.
+ *
+ * Fetches and displays live bus arrivals with automatic polling.
+ */
 @HiltViewModel
 class BusListViewModel @Inject constructor(
+    private val getBusArrivalsUseCase: GetBusArrivalsUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -27,20 +31,15 @@ class BusListViewModel @Inject constructor(
     val uiState: StateFlow<BusListUiState> = _uiState.asStateFlow()
 
     private var pollingJob: Job? = null
+    private val lineId: String = savedStateHandle.get<String>("lineId") ?: ""
 
     init {
-        val lineId = savedStateHandle.get<String>("lineId") ?: ""
         val lineName = savedStateHandle.get<String>("lineName") ?: ""
         val fromName = savedStateHandle.get<String>("fromName") ?: ""
         val toName = savedStateHandle.get<String>("toName") ?: ""
 
-        _uiState.update { state ->
-            state.copy(
-                lineId = lineId,
-                lineName = lineName,
-                fromName = fromName,
-                toName = toName
-            )
+        _uiState.update {
+            it.copy(lineId = lineId, lineName = lineName, fromName = fromName, toName = toName)
         }
 
         startPolling()
@@ -51,7 +50,7 @@ class BusListViewModel @Inject constructor(
         pollingJob = viewModelScope.launch {
             while (isActive) {
                 loadBusArrivals()
-                delay(POLLING_INTERVAL_MS)
+                delay(GetBusArrivalsUseCase.POLLING_INTERVAL_MS)
             }
         }
     }
@@ -64,49 +63,21 @@ class BusListViewModel @Inject constructor(
             _uiState.update { it.copy(isRefreshing = true) }
         }
 
-        try {
-            delay(500)
-
-            // Mock data matching Figma design
-            val mockBuses = listOf(
-                BusArrivalItem(
-                    vehicleId = "123",
-                    stationName = "Stop A",
-                    naptanId = "490000123A",
-                    timeToStationMinutes = 2,
-                    destinationName = "Euston Station"
-                ),
-                BusArrivalItem(
-                    vehicleId = "456",
-                    stationName = "Stop B",
-                    naptanId = "490000456B",
-                    timeToStationMinutes = 5,
-                    destinationName = "Euston Station"
-                ),
-                BusArrivalItem(
-                    vehicleId = "789",
-                    stationName = "Stop C",
-                    naptanId = "490000789C",
-                    timeToStationMinutes = 8,
-                    destinationName = "Euston Station"
-                )
-            )
-
-            _uiState.update { state ->
-                state.copy(
-                    buses = mockBuses,
-                    isLoading = false,
-                    isRefreshing = false,
-                    errorMessage = null
-                )
+        when (val result = getBusArrivalsUseCase(lineId)) {
+            is Result.Success -> {
+                _uiState.update {
+                    it.copy(
+                        buses = result.data,
+                        isLoading = false,
+                        isRefreshing = false,
+                        errorMessage = null
+                    )
+                }
             }
-        } catch (e: Exception) {
-            _uiState.update { state ->
-                state.copy(
-                    isLoading = false,
-                    isRefreshing = false,
-                    errorMessage = "Failed to load bus arrivals"
-                )
+            is Result.Error -> {
+                _uiState.update {
+                    it.copy(isLoading = false, isRefreshing = false, errorMessage = result.message)
+                }
             }
         }
     }
@@ -126,9 +97,5 @@ class BusListViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         stopPolling()
-    }
-
-    companion object {
-        private const val POLLING_INTERVAL_MS = 30_000L
     }
 }

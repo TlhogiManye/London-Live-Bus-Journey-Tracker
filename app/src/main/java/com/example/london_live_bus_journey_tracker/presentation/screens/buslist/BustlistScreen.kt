@@ -35,6 +35,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.london_live_bus_journey_tracker.R
+import com.example.london_live_bus_journey_tracker.domain.model.BusArrival
 import com.example.london_live_bus_journey_tracker.presentation.components.EmptyBusState
 import com.example.london_live_bus_journey_tracker.presentation.components.ErrorState
 import com.example.london_live_bus_journey_tracker.presentation.components.LoadingState
@@ -47,8 +48,6 @@ import com.example.london_live_bus_journey_tracker.ui.theme.LightGray
 import com.example.london_live_bus_journey_tracker.ui.theme.Spacing
 import com.example.london_live_bus_journey_tracker.ui.theme.TextPrimary
 import com.example.london_live_bus_journey_tracker.ui.theme.TextSecondary
-import BusListUiState
-import com.example.london_live_bus_journey_tracker.domain.model.BusArrivalItem
 
 @Composable
 fun BusListScreen(
@@ -92,7 +91,7 @@ fun BusListScreen(
 @Composable
 private fun BusListSheetContent(
     uiState: BusListUiState,
-    onBusSelected: (BusArrivalItem) -> Unit,
+    onBusSelected: (BusArrival) -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -161,11 +160,14 @@ private fun BusListSheetContent(
 
 @Composable
 private fun BusArrivalsList(
-    buses: List<BusArrivalItem>,
-    onBusClick: (BusArrivalItem) -> Unit,
+    buses: List<BusArrival>,
+    onBusClick: (BusArrival) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(modifier = modifier) {
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = Spacing.extraLarge)
+    ) {
         items(buses, key = { it.vehicleId }) { bus ->
             BusArrivalRow(
                 bus = bus,
@@ -177,7 +179,7 @@ private fun BusArrivalsList(
 
 @Composable
 private fun BusArrivalRow(
-    bus: BusArrivalItem,
+    bus: BusArrival,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {

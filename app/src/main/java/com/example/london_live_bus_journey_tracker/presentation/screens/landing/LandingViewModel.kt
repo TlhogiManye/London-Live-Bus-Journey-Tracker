@@ -1,6 +1,5 @@
 package com.example.london_live_bus_journey_tracker.presentation.screens.landing
 
-import LandingUiState
 import androidx.lifecycle.ViewModel
 import com.example.london_live_bus_journey_tracker.domain.model.RecentSearch
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -10,8 +9,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
-
-
+/**
+ * ViewModel for the Landing screen.
+ *
+ * Manages recent search history.
+ * TODO: Inject GetRecentSearchesUseCase when local storage is implemented.
+ */
 @HiltViewModel
 class LandingViewModel @Inject constructor() : ViewModel() {
 
@@ -23,7 +26,7 @@ class LandingViewModel @Inject constructor() : ViewModel() {
     }
 
     private fun loadRecentSearches() {
-        // Mock data matching Figma design
+        // TODO: Replace with Room/DataStore implementation
         val mockSearches = listOf(
             RecentSearch(
                 id = "1",
@@ -42,16 +45,21 @@ class LandingViewModel @Inject constructor() : ViewModel() {
                 durationMinutes = 30
             )
         )
-
-        _uiState.update { state ->
-            state.copy(recentSearches = mockSearches)
-        }
+        _uiState.update { it.copy(recentSearches = mockSearches) }
     }
 
     fun addRecentSearch(search: RecentSearch) {
         _uiState.update { state ->
             val updated = listOf(search) + state.recentSearches.filter { it.id != search.id }
-            state.copy(recentSearches = updated.take(10))
+            state.copy(recentSearches = updated.take(MAX_RECENT_SEARCHES))
         }
+    }
+
+    fun clearRecentSearches() {
+        _uiState.update { it.copy(recentSearches = emptyList()) }
+    }
+
+    companion object {
+        private const val MAX_RECENT_SEARCHES = 10
     }
 }
