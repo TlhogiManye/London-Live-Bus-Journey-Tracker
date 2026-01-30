@@ -120,6 +120,17 @@ class TrackingViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Resumes tracking when screen becomes visible again.
+     * Only restarts if route is loaded and not already tracking.
+     */
+    fun resumeTracking() {
+        if ((trackingJob == null || trackingJob?.isActive != true) &&
+            _uiState.value.routeStops.isNotEmpty()) {
+            startTracking()
+        }
+    }
+
     fun stopPolling() {
         trackingJob?.cancel()
         trackingJob = null
