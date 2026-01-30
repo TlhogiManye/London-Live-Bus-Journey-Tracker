@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -24,8 +25,10 @@ import com.example.london_live_bus_journey_tracker.presentation.components.Landi
 import com.example.london_live_bus_journey_tracker.presentation.components.MapBottomSheetScaffold
 import com.example.london_live_bus_journey_tracker.presentation.components.RouteHistoryCard
 import com.example.london_live_bus_journey_tracker.presentation.components.SimpleLocationMap
+import com.example.london_live_bus_journey_tracker.presentation.components.StopMarker
 import com.example.london_live_bus_journey_tracker.ui.theme.Spacing
 import com.example.london_live_bus_journey_tracker.ui.theme.TextSecondary
+import com.google.android.gms.maps.model.LatLng
 
 @Composable
 fun LandingScreen(
@@ -34,6 +37,17 @@ fun LandingScreen(
     viewModel: LandingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Convert bus stops to StopMarker for map display
+    val busStopMarkers = remember(uiState.busStops) {
+        uiState.busStops.map { stop ->
+            StopMarker(
+                id = stop.id,
+                name = stop.name,
+                position = LatLng(stop.lat, stop.lon)
+            )
+        }
+    }
 
     MapBottomSheetScaffold(
         sheetPeekHeight = 280.dp,
@@ -45,8 +59,8 @@ fun LandingScreen(
             )
         },
         mapContent = {
-            // Show London center map
-            SimpleLocationMap()
+            // Show London map with bus stops
+            SimpleLocationMap(busStops = busStopMarkers)
         }
     )
 }

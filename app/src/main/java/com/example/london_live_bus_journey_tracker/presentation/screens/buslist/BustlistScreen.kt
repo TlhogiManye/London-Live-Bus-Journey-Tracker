@@ -1,7 +1,5 @@
 package com.example.london_live_bus_journey_tracker.presentation.screens.buslist
 
-import BusMarker
-import StopMarker
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -39,7 +37,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.london_live_bus_journey_tracker.R
 import com.example.london_live_bus_journey_tracker.domain.model.BusArrival
-import com.example.london_live_bus_journey_tracker.presentation.components.BusTrackerMap
+import com.example.london_live_bus_journey_tracker.presentation.components.BusListMap
+import com.example.london_live_bus_journey_tracker.presentation.components.BusMarker
 import com.example.london_live_bus_journey_tracker.presentation.components.EmptyBusState
 import com.example.london_live_bus_journey_tracker.presentation.components.ErrorState
 import com.example.london_live_bus_journey_tracker.presentation.components.LoadingState
@@ -100,18 +99,6 @@ private fun BusListMapContent(
     uiState: BusListUiState,
     modifier: Modifier = Modifier
 ) {
-    // Create stop markers from route stops (if available)
-    val stopMarkers = remember(uiState.routeStops) {
-        uiState.routeStops.map { stop ->
-            StopMarker(
-                id = stop.naptanId,
-                name = stop.name,
-                position = LatLng(stop.lat, stop.lon),
-                isCurrentStop = false
-            )
-        }
-    }
-
     // Create route path from stops
     val routePath = remember(uiState.routeStops) {
         uiState.routeStops.map { stop ->
@@ -119,28 +106,49 @@ private fun BusListMapContent(
         }
     }
 
-    // Show the first bus as a marker if we have stops
-    val primaryBusMarker = remember(uiState.buses, uiState.routeStops) {
-        if (uiState.routeStops.isEmpty() || uiState.buses.isEmpty()) {
-            null
+    // Origin and destination positions
+    val originPosition = remember(uiState.routeStops) {
+        uiState.routeStops.firstOrNull()?.let { LatLng(it.lat, it.lon) }
+    }
+
+    val destinationPosition = remember(uiState.routeStops) {
+        uiState.routeStops.lastOrNull()?.let { LatLng(it.lat, it.lon) }
+    }
+
+    // Intermediate stops (excluding first and last)
+    val intermediateStops = remember(uiState.routeStops) {
+        if (uiState.routeStops.size > 2) {
+            uiState.routeStops.drop(1).dropLast(1).map { stop ->
+                LatLng(stop.lat, stop.lon)
+            }
         } else {
-            val firstBus = uiState.buses.first()
-            val stop = uiState.routeStops.find { it.naptanId == firstBus.naptanId }
+            emptyList()
+        }
+    }
+
+    // Create bus markers for all buses with known positions
+    val busMarkers = remember(uiState.buses, uiState.routeStops) {
+        uiState.buses.mapNotNull { bus ->
+            val stop = uiState.routeStops.find { it.naptanId == bus.naptanId }
             stop?.let {
                 BusMarker(
-                    vehicleId = firstBus.vehicleId,
+                    vehicleId = bus.vehicleId,
                     position = LatLng(it.lat, it.lon),
-                    title = "Bus ${firstBus.lineName} - ${firstBus.displayTime}"
+                    title = "Bus ${bus.lineName} - ${bus.displayTime}"
                 )
             }
         }
     }
 
-    BusTrackerMap(
+    BusListMap(
         modifier = modifier,
-        busMarker = primaryBusMarker,
-        stopMarkers = stopMarkers,
-        routePath = routePath
+        busMarkers = busMarkers,
+        originPosition = originPosition,
+        destinationPosition = destinationPosition,
+        originName = uiState.fromName.ifBlank { "Start" },
+        destinationName = uiState.toName.ifBlank { "End" },
+        routePath = routePath,
+        intermediateStops = intermediateStops
     )
 }
 

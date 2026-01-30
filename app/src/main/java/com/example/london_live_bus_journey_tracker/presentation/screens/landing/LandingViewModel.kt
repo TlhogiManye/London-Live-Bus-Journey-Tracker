@@ -52,7 +52,27 @@ class LandingViewModel @Inject constructor() : ViewModel() {
                 durationMinutes = 30
             )
         )
-        _uiState.update { it.copy(recentSearches = mockSearches) }
+
+        // Sample bus stops in central London for map display
+        val sampleBusStops = listOf(
+            LandingBusStop("490000252S", "Victoria Station", 51.4965, -0.1447),
+            LandingBusStop("490000173R", "Oxford Circus", 51.5152, -0.1418),
+            LandingBusStop("490000174A", "Paddington Station", 51.5154, -0.1755),
+            LandingBusStop("490000138W", "Liverpool Street", 51.5178, -0.0823),
+            LandingBusStop("490000077H", "Euston Station", 51.5282, -0.1337),
+            LandingBusStop("490000129S", "King's Cross", 51.5308, -0.1238),
+            LandingBusStop("490000254E", "Waterloo Station", 51.5035, -0.1132),
+            LandingBusStop("490000235A", "Trafalgar Square", 51.5081, -0.1280),
+            LandingBusStop("490000179Z", "Piccadilly Circus", 51.5100, -0.1347),
+            LandingBusStop("490000134A", "Leicester Square", 51.5112, -0.1281)
+        )
+
+        _uiState.update {
+            it.copy(
+                recentSearches = mockSearches,
+                busStops = sampleBusStops
+            )
+        }
     }
 
     fun addRecentSearch(search: RecentSearch) {

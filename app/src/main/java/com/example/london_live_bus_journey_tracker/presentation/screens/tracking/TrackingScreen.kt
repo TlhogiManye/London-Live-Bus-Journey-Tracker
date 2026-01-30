@@ -1,7 +1,5 @@
 package com.example.london_live_bus_journey_tracker.presentation.screens.tracking
 
-import BusMarker
-import StopMarker
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,10 +30,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.london_live_bus_journey_tracker.R
-import com.example.london_live_bus_journey_tracker.presentation.components.BusTrackerMap
 import com.example.london_live_bus_journey_tracker.presentation.components.ErrorState
 import com.example.london_live_bus_journey_tracker.presentation.components.LoadingState
 import com.example.london_live_bus_journey_tracker.presentation.components.MapBottomSheetScaffold
+import com.example.london_live_bus_journey_tracker.presentation.components.TrackingMap
 import com.example.london_live_bus_journey_tracker.ui.theme.BusYellow
 import com.example.london_live_bus_journey_tracker.ui.theme.ComponentSize
 import com.example.london_live_bus_journey_tracker.ui.theme.CornerRadius
@@ -85,39 +83,60 @@ private fun TrackingMapContent(
     uiState: TrackingUiState,
     modifier: Modifier = Modifier
 ) {
-    // Convert UI state to map markers
-    val busMarker = remember(uiState.busPosition, uiState.vehicleId, uiState.lineName) {
+    // Bus position
+    val busPosition = remember(uiState.busPosition) {
         uiState.busPosition?.let { pos ->
-            BusMarker(
-                vehicleId = uiState.vehicleId,
-                position = LatLng(pos.lat, pos.lon),
-                title = "Bus ${uiState.lineName}"
-            )
+            LatLng(pos.lat, pos.lon)
         }
     }
 
-    val stopMarkers = remember(uiState.routeStops) {
-        uiState.routeStops.map { stop ->
-            StopMarker(
-                id = stop.naptanId,
-                name = stop.name,
-                position = LatLng(stop.lat, stop.lon),
-                isCurrentStop = stop.isCurrentStop
-            )
+    // Current stop position
+    val currentStopPosition = remember(uiState.routeStops) {
+        uiState.routeStops.find { it.isCurrentStop }?.let { stop ->
+            LatLng(stop.lat, stop.lon)
         }
     }
 
+    val currentStopName = remember(uiState.routeStops) {
+        uiState.routeStops.find { it.isCurrentStop }?.name ?: ""
+    }
+
+    // Destination (last stop)
+    val destinationPosition = remember(uiState.routeStops) {
+        uiState.routeStops.lastOrNull()?.let { stop ->
+            LatLng(stop.lat, stop.lon)
+        }
+    }
+
+    val destinationName = remember(uiState.routeStops) {
+        uiState.routeStops.lastOrNull()?.name ?: uiState.destinationName
+    }
+
+    // Route path
     val routePath = remember(uiState.routeStops) {
         uiState.routeStops.map { stop ->
             LatLng(stop.lat, stop.lon)
         }
     }
 
-    BusTrackerMap(
+    // Intermediate stops (excluding current and destination)
+    val intermediateStops = remember(uiState.routeStops) {
+        uiState.routeStops
+            .filter { !it.isCurrentStop && it != uiState.routeStops.lastOrNull() }
+            .map { stop -> LatLng(stop.lat, stop.lon) }
+    }
+
+    TrackingMap(
         modifier = modifier,
-        busMarker = busMarker,
-        stopMarkers = stopMarkers,
-        routePath = routePath
+        busPosition = busPosition,
+        busTitle = "Bus ${uiState.lineName}",
+        vehicleId = uiState.vehicleId,
+        currentStopPosition = currentStopPosition,
+        currentStopName = currentStopName,
+        destinationPosition = destinationPosition,
+        destinationName = destinationName,
+        routePath = routePath,
+        intermediateStops = intermediateStops
     )
 }
 
