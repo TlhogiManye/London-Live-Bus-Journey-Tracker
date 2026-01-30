@@ -76,7 +76,7 @@ class TflMapper @Inject constructor() {
     /**
      * Maps a journey DTO to a JourneyOption domain model.
      *
-     * Extracts the primary bus leg from the journey.
+     * Extracts the primary bus leg from the journey including route path.
      */
     fun mapToJourneyOption(dto: JourneyDto): JourneyOption? {
         // Find the bus leg
@@ -98,13 +98,62 @@ class TflMapper @Inject constructor() {
         val viaDescription = busLeg.instruction?.summary
             ?: "Bus $lineName"
 
+        // Parse route path from all legs
+        val routePath = mutableListOf<Pair<Double, Double>>()
+        dto.legs.forEach { leg ->
+            val lineString = leg.path?.lineString
+            if (lineString != null) {
+                routePath.addAll(parseLineString(lineString))
+            }
+        }
+
+        // Get origin/destination from first and last legs
+        val firstLeg = dto.legs.firstOrNull()
+        val lastLeg = dto.legs.lastOrNull()
+
+        val originLat = firstLeg?.departurePoint?.lat
+        val originLon = firstLeg?.departurePoint?.lon
+        val destinationLat = lastLeg?.arrivalPoint?.lat
+        val destinationLon = lastLeg?.arrivalPoint?.lon
+
         return JourneyOption(
             lineId = lineId,
             lineName = lineName,
             routeNumber = lineName,
             viaDescription = viaDescription,
-            durationMinutes = dto.duration ?: 0
+            durationMinutes = dto.duration ?: 0,
+            routePath = routePath,
+            originLat = originLat,
+            originLon = originLon,
+            destinationLat = destinationLat,
+            destinationLon = destinationLon
         )
+    }
+
+    /**
+     * Parses a lineString JSON into a list of coordinate pairs.
+     * TfL API uses GeoJSON format: [[lon,lat],[lon,lat],...]
+     * We return as Pair(lat, lon) for Google Maps compatibility.
+     */
+    private fun parseLineString(lineString: String): List<Pair<Double, Double>> {
+        return try {
+            val coordinates = mutableListOf<Pair<Double, Double>>()
+
+            // Parse coordinate pairs - TfL format is [lon,lat] (GeoJSON standard)
+            val regex = "\\[([\\d.-]+),\\s*([\\d.-]+)]".toRegex()
+            regex.findAll(lineString).forEach { match ->
+                val lon = match.groupValues[1].toDoubleOrNull()
+                val lat = match.groupValues[2].toDoubleOrNull()
+                if (lat != null && lon != null) {
+                    // Return as (lat, lon) for Google Maps
+                    coordinates.add(Pair(lat, lon))
+                }
+            }
+
+            coordinates
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     /**

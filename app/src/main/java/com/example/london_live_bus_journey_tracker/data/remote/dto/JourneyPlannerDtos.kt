@@ -91,6 +91,9 @@ data class JourneyDto(
  * @property routeOptions Available route options for this leg
  * @property mode Transport mode for this leg
  * @property duration Duration of this leg in minutes
+ * @property path Route path with coordinates
+ * @property departurePoint Starting point of this leg
+ * @property arrivalPoint Ending point of this leg
  */
 @Serializable
 data class LegDto(
@@ -104,7 +107,64 @@ data class LegDto(
     val mode: ModeDto? = null,
 
     @SerialName("duration")
-    val duration: Int? = null
+    val duration: Int? = null,
+
+    @SerialName("path")
+    val path: PathDto? = null,
+
+    @SerialName("departurePoint")
+    val departurePoint: LegPointDto? = null,
+
+    @SerialName("arrivalPoint")
+    val arrivalPoint: LegPointDto? = null
+)
+
+/**
+ * Path data containing route coordinates.
+ *
+ * @property lineString JSON string of coordinates: "[[lon,lat],[lon,lat],...]"
+ * @property stopPoints Intermediate stops along the path
+ */
+@Serializable
+data class PathDto(
+    @SerialName("lineString")
+    val lineString: String? = null,
+
+    @SerialName("stopPoints")
+    val stopPoints: List<PathStopPointDto>? = null
+)
+
+/**
+ * Stop point in the path.
+ */
+@Serializable
+data class PathStopPointDto(
+    @SerialName("id")
+    val id: String? = null,
+
+    @SerialName("name")
+    val name: String? = null
+)
+
+/**
+ * Departure or arrival point for a leg.
+ */
+@Serializable
+data class LegPointDto(
+    @SerialName("commonName")
+    val commonName: String? = null,
+
+    @SerialName("lat")
+    val lat: Double? = null,
+
+    @SerialName("lon")
+    val lon: Double? = null,
+
+    @SerialName("icsCode")
+    val icsCode: String? = null,
+
+    @SerialName("naptanId")
+    val naptanId: String? = null
 )
 
 /**

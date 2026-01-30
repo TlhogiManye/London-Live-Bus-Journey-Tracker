@@ -17,6 +17,8 @@ import javax.inject.Singleton
  *
  * Includes the Virtual GPS algorithm for inferring bus positions
  * from arrival predictions and route sequence data.
+ *
+ * Caches static data (route sequences) to avoid unnecessary refetching.
  */
 @Singleton
 class BusRepositoryImpl @Inject constructor(
@@ -24,6 +26,12 @@ class BusRepositoryImpl @Inject constructor(
     private val mapper: TflMapper,
     private val ioDispatcher: CoroutineDispatcher
 ) : BusRepository {
+
+    /**
+     * In-memory cache for route sequences (static data).
+     * Key format: "lineId_direction" (e.g., "24_inbound")
+     */
+    private val routeSequenceCache = mutableMapOf<String, RouteSequence>()
 
     /**
      * Gets live arrival predictions for a bus line.
@@ -55,11 +63,19 @@ class BusRepositoryImpl @Inject constructor(
 
     /**
      * Gets the ordered stop sequence for a bus route.
+     * Uses in-memory cache to avoid refetching static data.
      */
     override suspend fun getRouteSequence(
         lineId: String,
         direction: String
     ): Result<RouteSequence> {
+        val cacheKey = "${lineId}_${direction}"
+
+        // Return cached data if available
+        routeSequenceCache[cacheKey]?.let { cached ->
+            return Result.Success(cached)
+        }
+
         return withContext(ioDispatcher) {
             try {
                 val response = apiService.getRouteSequence(lineId, direction)
@@ -69,6 +85,8 @@ class BusRepositoryImpl @Inject constructor(
                     if (body != null) {
                         val routeSequence = mapper.mapToRouteSequence(body)
                         if (routeSequence != null) {
+                            // Cache the result for future use
+                            routeSequenceCache[cacheKey] = routeSequence
                             Result.Success(routeSequence)
                         } else {
                             Result.Error("No stops found in route")
@@ -84,7 +102,7 @@ class BusRepositoryImpl @Inject constructor(
                     message = e.message ?: "Network error",
                     exception = e
                 )
-            } as Result<RouteSequence>
+            }
         }
     }
 

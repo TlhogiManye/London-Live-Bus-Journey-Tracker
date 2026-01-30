@@ -1,21 +1,20 @@
 package com.example.london_live_bus_journey_tracker.presentation.screens.journey
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -26,13 +25,14 @@ import com.example.london_live_bus_journey_tracker.domain.model.JourneyOption
 import com.example.london_live_bus_journey_tracker.presentation.components.DirectionsHeader
 import com.example.london_live_bus_journey_tracker.presentation.components.ErrorState
 import com.example.london_live_bus_journey_tracker.presentation.components.JourneyOptionCard
+import com.example.london_live_bus_journey_tracker.presentation.components.JourneyRouteMap
 import com.example.london_live_bus_journey_tracker.presentation.components.LoadingState
 import com.example.london_live_bus_journey_tracker.presentation.components.MapBottomSheetScaffold
-import com.example.london_live_bus_journey_tracker.presentation.components.SimpleLocationMap
 import com.example.london_live_bus_journey_tracker.ui.theme.LightGray
 import com.example.london_live_bus_journey_tracker.ui.theme.Spacing
 import com.example.london_live_bus_journey_tracker.ui.theme.TextPrimary
 import com.example.london_live_bus_journey_tracker.ui.theme.TextSecondary
+import com.google.android.gms.maps.model.LatLng
 
 @Composable
 fun JourneyResultsScreen(
@@ -42,12 +42,31 @@ fun JourneyResultsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    // Convert route path to LatLng list with explicit types
+    val routePathLatLng: List<LatLng> = remember(uiState.routePath) {
+        uiState.routePath.map { pair -> LatLng(pair.first, pair.second) }
+    }
+
+    // Origin position with explicit null handling
+    val originPosition: LatLng? = remember(uiState.originLat, uiState.originLon) {
+        val lat = uiState.originLat
+        val lon = uiState.originLon
+        if (lat != null && lon != null) LatLng(lat, lon) else null
+    }
+
+    // Destination position with explicit null handling
+    val destinationPosition: LatLng? = remember(uiState.destinationLat, uiState.destinationLon) {
+        val lat = uiState.destinationLat
+        val lon = uiState.destinationLon
+        if (lat != null && lon != null) LatLng(lat, lon) else null
+    }
+
     MapBottomSheetScaffold(
         sheetPeekHeight = 380.dp,
         sheetContent = {
             JourneyResultsSheetContent(
                 uiState = uiState,
-                onRouteSelected = { option ->
+                onRouteSelected = { option: JourneyOption ->
                     onRouteSelected(
                         option.lineId,
                         option.lineName,
@@ -59,7 +78,13 @@ fun JourneyResultsScreen(
             )
         },
         mapContent = {
-            SimpleLocationMap()
+            JourneyRouteMap(
+                originPosition = originPosition,
+                destinationPosition = destinationPosition,
+                originName = uiState.fromName,
+                destinationName = uiState.toName,
+                routePath = routePathLatLng
+            )
         }
     )
 }
@@ -160,11 +185,11 @@ private fun JourneyOptionsList(
         )
 
         LazyColumn(
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = Spacing.extraLarge)
+            contentPadding = PaddingValues(bottom = Spacing.extraLarge)
         ) {
             items(
                 count = options.size,
-                key = { index -> "${options[index].lineId}_${index}" }
+                key = { index -> "${options[index].lineId}_$index" }
             ) { index ->
                 val option = options[index]
                 JourneyOptionCard(

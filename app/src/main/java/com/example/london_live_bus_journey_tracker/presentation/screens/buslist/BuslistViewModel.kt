@@ -108,6 +108,16 @@ class BusListViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Resumes polling when screen becomes visible again.
+     * Only restarts if not already polling.
+     */
+    fun resumePolling() {
+        if (pollingJob == null || pollingJob?.isActive != true) {
+            startPolling()
+        }
+    }
+
     fun stopPolling() {
         pollingJob?.cancel()
         pollingJob = null

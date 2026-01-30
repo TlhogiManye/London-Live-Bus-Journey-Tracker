@@ -62,9 +62,11 @@ fun BusListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    // Lifecycle-aware polling: pause when screen not visible, resume when visible
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
+                Lifecycle.Event.ON_RESUME -> viewModel.resumePolling()
                 Lifecycle.Event.ON_PAUSE -> viewModel.stopPolling()
                 else -> { }
             }

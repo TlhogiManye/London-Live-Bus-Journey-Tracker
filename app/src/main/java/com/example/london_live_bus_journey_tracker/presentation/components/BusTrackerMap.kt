@@ -68,21 +68,29 @@ object RouteColors {
 /** Center anchor offset for markers */
 private val CENTER_ANCHOR = Offset(0.5f, 0.5f)
 
+/** Bottom-center anchor for pin markers (tip of pin) */
+private val BOTTOM_CENTER_ANCHOR = Offset(0.5f, 1.0f)
+
 /**
  * Container for all map marker icons.
+ *
+ * Usage per screen:
+ * - Landing: busStopLanding (orange bus stop marker)
+ * - Journey Results: dot (gray), start (green), end (red)
+ * - Bus List: dot (gray), start, end, busVehicle (yellow bus for live buses)
+ * - Tracking: dot, currentStop (blue), end, busVehicle
  */
 data class MapMarkerIcons(
     val start: BitmapDescriptor?,
     val end: BitmapDescriptor?,
-    val busStop: BitmapDescriptor?,
-    val busVehicle: BitmapDescriptor?,
-    val currentStop: BitmapDescriptor?,
-    val dot: BitmapDescriptor?
+    val busStopLanding: BitmapDescriptor?,  // Orange bus stop for Landing screen
+    val dot: BitmapDescriptor?,              // Small gray dot for route stops
+    val busVehicle: BitmapDescriptor?,       // Yellow bus for live bus positions
+    val currentStop: BitmapDescriptor?       // Blue dot for current location
 )
 
 /**
  * Converts a vector drawable to a BitmapDescriptor for map markers.
- * Must only be called after GoogleMap is initialized (in onMapLoaded callback).
  */
 private fun bitmapDescriptorFromVector(
     context: Context,
@@ -104,21 +112,28 @@ private fun bitmapDescriptorFromVector(
 
 /**
  * Creates all map marker icons. Must be called after map is loaded.
+ *
+ * Icon mapping per Figma:
+ * - start: Green pin for origin (ic_marker_start)
+ * - end: Red pin for destination (ic_marker_end)
+ * - busStopLanding: Orange bus stop marker for Landing screen (ic_bus_stop)
+ * - dot: Small gray dot for route intermediate stops (ic_dot_icon)
+ * - busVehicle: Yellow bus for actual live buses (ic_bus_marker)
+ * - currentStop: Blue dot for current location (ic_current_bus_stop)
  */
 private fun createMapMarkerIcons(context: Context): MapMarkerIcons {
     return MapMarkerIcons(
-        start = bitmapDescriptorFromVector(context, R.drawable.ic_marker_start, 100, 100),
-        end = bitmapDescriptorFromVector(context, R.drawable.ic_marker_end, 100, 100),
-        busStop = bitmapDescriptorFromVector(context, R.drawable.ic_bus_marker, 50, 50),
-        busVehicle = bitmapDescriptorFromVector(context, R.drawable.ic_bus, 100, 100),
-        currentStop = bitmapDescriptorFromVector(context, R.drawable.ic_current_bus_stop, 100, 100),
-        dot = bitmapDescriptorFromVector(context, R.drawable.ic_dot_icon, 10, 10)
+        start = bitmapDescriptorFromVector(context, R.drawable.ic_marker_start, 80, 100),
+        end = bitmapDescriptorFromVector(context, R.drawable.ic_marker_end, 80, 100),
+        busStopLanding = bitmapDescriptorFromVector(context, R.drawable.ic_bus_stop, 50, 50),
+        dot = bitmapDescriptorFromVector(context, R.drawable.ic_dot_icon, 50, 50),
+        busVehicle = bitmapDescriptorFromVector(context, R.drawable.ic_bus_marker, 60, 80),
+        currentStop = bitmapDescriptorFromVector(context, R.drawable.ic_current_bus_stop, 50, 50)
     )
 }
 
 /**
  * Reusable Google Maps component for bus tracking.
- * Displays custom markers matching Figma designs.
  */
 @Composable
 fun BusTrackerMap(
@@ -158,10 +173,8 @@ fun BusTrackerMap(
         )
     }
 
-    // Icons created lazily after map loads
     var icons by remember { mutableStateOf<MapMarkerIcons?>(null) }
 
-    // Auto-fit camera to show all markers
     LaunchedEffect(busMarkers, stopMarkers, originPosition, destinationPosition, routePath) {
         val allPoints = mutableListOf<LatLng>()
         busMarkers.forEach { allPoints.add(it.position) }
@@ -176,7 +189,7 @@ fun BusTrackerMap(
             } else {
                 val boundsBuilder = LatLngBounds.Builder()
                 allPoints.forEach { boundsBuilder.include(it) }
-                cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 120))
+                cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100))
             }
         }
     }
@@ -187,7 +200,6 @@ fun BusTrackerMap(
         properties = mapProperties,
         uiSettings = mapUiSettings,
         onMapLoaded = {
-            // Create icons after map is ready
             if (icons == null) {
                 icons = createMapMarkerIcons(context)
             }
@@ -198,10 +210,10 @@ fun BusTrackerMap(
 
         // Draw route polyline
         if (routePath.size >= 2) {
-            Polyline(points = routePath, color = routeColor, width = 12f)
+            Polyline(points = routePath, color = routeColor, width = 10f)
         }
 
-        // Draw intermediate stop markers (small dots)
+        // Draw intermediate stop markers (small gray dots)
         stopMarkers.filter { !it.isOrigin && !it.isDestination && !it.isCurrentStop }.forEach { stop ->
             Marker(
                 state = MarkerState(position = stop.position),
@@ -211,7 +223,7 @@ fun BusTrackerMap(
             )
         }
 
-        // Draw current stop markers
+        // Draw current stop markers (blue dot)
         stopMarkers.filter { it.isCurrentStop && !it.isOrigin && !it.isDestination }.forEach { stop ->
             Marker(
                 state = MarkerState(position = stop.position),
@@ -222,29 +234,29 @@ fun BusTrackerMap(
             )
         }
 
-        // Draw origin marker
+        // Draw origin marker (green pin)
         originPosition?.let { pos ->
             Marker(
                 state = MarkerState(position = pos),
                 title = originName,
                 snippet = "From",
                 icon = currentIcons.start,
-                anchor = CENTER_ANCHOR
+                anchor = BOTTOM_CENTER_ANCHOR
             )
         }
 
-        // Draw destination marker
+        // Draw destination marker (red pin)
         destinationPosition?.let { pos ->
             Marker(
                 state = MarkerState(position = pos),
                 title = destinationName,
                 snippet = "To",
                 icon = currentIcons.end,
-                anchor = CENTER_ANCHOR
+                anchor = BOTTOM_CENTER_ANCHOR
             )
         }
 
-        // Draw bus vehicle markers
+        // Draw bus vehicle markers (yellow bus)
         busMarkers.forEach { bus ->
             Marker(
                 state = MarkerState(position = bus.position),
@@ -281,15 +293,13 @@ fun SimpleLocationMap(
             scrollGesturesEnabled = true,
             tiltGesturesEnabled = false,
             rotationGesturesEnabled = false,
-            compassEnabled = false,
+            compassEnabled = true,
             mapToolbarEnabled = false
         )
     }
 
-    // Icons created lazily after map loads
     var icons by remember { mutableStateOf<MapMarkerIcons?>(null) }
 
-    // Fit camera to show all stops
     LaunchedEffect(busStops) {
         if (busStops.isNotEmpty()) {
             if (busStops.size == 1) {
@@ -314,11 +324,12 @@ fun SimpleLocationMap(
     ) {
         val currentIcons = icons ?: return@GoogleMap
 
+        // Use orange bus stop markers for Landing screen
         busStops.forEach { stop ->
             Marker(
                 state = MarkerState(position = stop.position),
                 title = stop.name,
-                icon = currentIcons.busStop,
+                icon = currentIcons.busStopLanding,  // Orange bus stop icon
                 anchor = CENTER_ANCHOR
             )
         }
@@ -356,10 +367,8 @@ fun JourneyRouteMap(
         )
     }
 
-    // Icons created lazily after map loads
     var icons by remember { mutableStateOf<MapMarkerIcons?>(null) }
 
-    // Fit camera to show all points
     LaunchedEffect(originPosition, destinationPosition, routePath) {
         val allPoints = mutableListOf<LatLng>()
         originPosition?.let { allPoints.add(it) }
@@ -369,7 +378,7 @@ fun JourneyRouteMap(
         if (allPoints.size >= 2) {
             val boundsBuilder = LatLngBounds.Builder()
             allPoints.forEach { boundsBuilder.include(it) }
-            cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 120))
+            cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100))
         } else if (allPoints.size == 1) {
             cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(allPoints.first(), 14f))
         }
@@ -389,33 +398,37 @@ fun JourneyRouteMap(
 
         // Draw blue route polyline
         if (routePath.size >= 2) {
-            Polyline(points = routePath, color = RouteColors.Blue, width = 12f)
+            Polyline(points = routePath, color = RouteColors.Blue, width = 10f)
         }
 
-        // Draw intermediate stops as bus stop markers
+        // Draw intermediate stops as small gray dots
         intermediateStops.forEach { pos ->
-            Marker(state = MarkerState(position = pos), icon = currentIcons.busStop, anchor = CENTER_ANCHOR)
+            Marker(
+                state = MarkerState(position = pos),
+                icon = currentIcons.dot,  // Small gray dot for route stops
+                anchor = CENTER_ANCHOR
+            )
         }
 
-        // Draw origin marker
+        // Draw origin marker (green pin)
         originPosition?.let {
             Marker(
                 state = MarkerState(position = it),
                 title = originName,
                 snippet = "From",
                 icon = currentIcons.start,
-                anchor = CENTER_ANCHOR
+                anchor = BOTTOM_CENTER_ANCHOR
             )
         }
 
-        // Draw destination marker
+        // Draw destination marker (red pin)
         destinationPosition?.let {
             Marker(
                 state = MarkerState(position = it),
                 title = destinationName,
                 snippet = "To",
                 icon = currentIcons.end,
-                anchor = CENTER_ANCHOR
+                anchor = BOTTOM_CENTER_ANCHOR
             )
         }
     }
@@ -424,6 +437,11 @@ fun JourneyRouteMap(
 /**
  * Map for Bus List screen showing route with bus positions.
  * Uses gray polyline per Figma design.
+ *
+ * Icon usage:
+ * - dot: Small gray dots for intermediate route stops
+ * - busVehicle: Yellow bus markers for live bus positions
+ * - start/end: Green/red pins for origin/destination
  */
 @Composable
 fun BusListMap(
@@ -453,10 +471,8 @@ fun BusListMap(
         )
     }
 
-    // Icons created lazily after map loads
     var icons by remember { mutableStateOf<MapMarkerIcons?>(null) }
 
-    // Fit camera to show all points
     LaunchedEffect(busMarkers, originPosition, destinationPosition, routePath) {
         val allPoints = mutableListOf<LatLng>()
         busMarkers.forEach { allPoints.add(it.position) }
@@ -467,7 +483,7 @@ fun BusListMap(
         if (allPoints.size >= 2) {
             val boundsBuilder = LatLngBounds.Builder()
             allPoints.forEach { boundsBuilder.include(it) }
-            cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 120))
+            cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100))
         } else if (allPoints.size == 1) {
             cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(allPoints.first(), 14f))
         }
@@ -487,43 +503,47 @@ fun BusListMap(
 
         // Draw gray route polyline
         if (routePath.size >= 2) {
-            Polyline(points = routePath, color = RouteColors.Gray, width = 12f)
+            Polyline(points = routePath, color = RouteColors.Gray, width = 10f)
         }
 
-        // Draw intermediate stops as bus stop markers
+        // Draw intermediate stops as SMALL GRAY DOTS
         intermediateStops.forEach { pos ->
-            Marker(state = MarkerState(position = pos), icon = currentIcons.busStop, anchor = CENTER_ANCHOR)
+            Marker(
+                state = MarkerState(position = pos),
+                icon = currentIcons.dot,  // Small gray dot for route stops
+                anchor = CENTER_ANCHOR
+            )
         }
 
-        // Draw origin marker
+        // Draw origin marker (green pin)
         originPosition?.let {
             Marker(
                 state = MarkerState(position = it),
                 title = originName,
                 snippet = "From",
                 icon = currentIcons.start,
-                anchor = CENTER_ANCHOR
+                anchor = BOTTOM_CENTER_ANCHOR
             )
         }
 
-        // Draw destination marker
+        // Draw destination marker (red pin)
         destinationPosition?.let {
             Marker(
                 state = MarkerState(position = it),
                 title = destinationName,
                 snippet = "To",
                 icon = currentIcons.end,
-                anchor = CENTER_ANCHOR
+                anchor = BOTTOM_CENTER_ANCHOR
             )
         }
 
-        // Draw bus markers
+        // Draw actual bus markers (YELLOW BUS ICON - only for real live buses!)
         busMarkers.forEach { bus ->
             Marker(
                 state = MarkerState(position = bus.position),
                 title = bus.title,
                 snippet = "Vehicle: ${bus.vehicleId}",
-                icon = currentIcons.busVehicle,
+                icon = currentIcons.busVehicle,  // Yellow bus for live buses
                 anchor = CENTER_ANCHOR,
                 zIndex = 1f
             )
@@ -533,7 +553,6 @@ fun BusListMap(
 
 /**
  * Map for Tracking screen showing active trip.
- * Uses blue polyline with current stop marker.
  */
 @Composable
 fun TrackingMap(
@@ -565,10 +584,8 @@ fun TrackingMap(
         )
     }
 
-    // Icons created lazily after map loads
     var icons by remember { mutableStateOf<MapMarkerIcons?>(null) }
 
-    // Fit camera to show all points
     LaunchedEffect(busPosition, currentStopPosition, destinationPosition, routePath) {
         val allPoints = mutableListOf<LatLng>()
         busPosition?.let { allPoints.add(it) }
@@ -579,7 +596,7 @@ fun TrackingMap(
         if (allPoints.size >= 2) {
             val boundsBuilder = LatLngBounds.Builder()
             allPoints.forEach { boundsBuilder.include(it) }
-            cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 120))
+            cameraPositionState.animate(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100))
         } else if (allPoints.size == 1) {
             cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(allPoints.first(), 14f))
         }
@@ -599,43 +616,47 @@ fun TrackingMap(
 
         // Draw blue route polyline
         if (routePath.size >= 2) {
-            Polyline(points = routePath, color = RouteColors.Blue, width = 12f)
+            Polyline(points = routePath, color = RouteColors.Blue, width = 10f)
         }
 
-        // Draw intermediate stops as bus stop markers
+        // Draw intermediate stops as small gray dots
         intermediateStops.forEach { pos ->
-            Marker(state = MarkerState(position = pos), icon = currentIcons.busStop, anchor = CENTER_ANCHOR)
+            Marker(
+                state = MarkerState(position = pos),
+                icon = currentIcons.dot,  // Small gray dot for route stops
+                anchor = CENTER_ANCHOR
+            )
         }
 
-        // Draw current stop marker
+        // Draw current stop marker (blue dot)
         currentStopPosition?.let {
             Marker(
                 state = MarkerState(position = it),
                 title = currentStopName,
                 snippet = "Current Stop",
-                icon = currentIcons.currentStop,
+                icon = currentIcons.currentStop,  // Blue dot for current location
                 anchor = CENTER_ANCHOR
             )
         }
 
-        // Draw destination marker
+        // Draw destination marker (red pin)
         destinationPosition?.let {
             Marker(
                 state = MarkerState(position = it),
                 title = destinationName,
                 snippet = "To",
                 icon = currentIcons.end,
-                anchor = CENTER_ANCHOR
+                anchor = BOTTOM_CENTER_ANCHOR
             )
         }
 
-        // Draw bus position marker
+        // Draw bus position marker (yellow bus)
         busPosition?.let {
             Marker(
                 state = MarkerState(position = it),
                 title = busTitle,
                 snippet = "Vehicle: $vehicleId",
-                icon = currentIcons.busVehicle,
+                icon = currentIcons.busVehicle,  // Yellow bus for live bus
                 anchor = CENTER_ANCHOR,
                 zIndex = 1f
             )
