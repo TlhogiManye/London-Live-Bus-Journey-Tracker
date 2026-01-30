@@ -126,8 +126,8 @@ private fun createMapMarkerIcons(context: Context): MapMarkerIcons {
         start = bitmapDescriptorFromVector(context, R.drawable.ic_marker_start, 80, 100),
         end = bitmapDescriptorFromVector(context, R.drawable.ic_marker_end, 80, 100),
         busStopLanding = bitmapDescriptorFromVector(context, R.drawable.ic_bus_stop, 50, 50),
-        dot = bitmapDescriptorFromVector(context, R.drawable.ic_dot_icon, 50, 50),
-        busVehicle = bitmapDescriptorFromVector(context, R.drawable.ic_bus_marker, 60, 80),
+        dot = bitmapDescriptorFromVector(context, R.drawable.ic_dot_icon, 80, 80),
+        busVehicle = bitmapDescriptorFromVector(context, R.drawable.ic_bus_marker, 80, 80),
         currentStop = bitmapDescriptorFromVector(context, R.drawable.ic_current_bus_stop, 50, 50)
     )
 }
