@@ -31,9 +31,9 @@ fun AppNavHost(
                 onRecentSearchClick = { recentSearch ->
                     navController.navigate(
                         Route.JourneyResults(
-                            fromId = recentSearch.fromName,
+                            fromId = recentSearch.fromId,
                             fromName = recentSearch.fromName,
-                            toId = recentSearch.toName,
+                            toId = recentSearch.toId,
                             toName = recentSearch.toName
                         )
                     )

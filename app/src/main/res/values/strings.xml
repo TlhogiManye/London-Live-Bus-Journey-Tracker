@@ -12,6 +12,7 @@
     <string name="search_address_title">Search Address</string>
     <string name="label_from">From</string>
     <string name="label_to">To</string>
+    <string name="search_button">Search</string>
     <string name="recent_searches_header">Recent searches</string>
     <string name="suggestions_header">Suggestions</string>
     <string name="location_united_kingdom">United Kingdom</string>

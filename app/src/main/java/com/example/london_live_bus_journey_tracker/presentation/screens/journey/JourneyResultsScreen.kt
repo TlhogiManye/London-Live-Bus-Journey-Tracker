@@ -28,6 +28,7 @@ import com.example.london_live_bus_journey_tracker.presentation.components.Error
 import com.example.london_live_bus_journey_tracker.presentation.components.JourneyOptionCard
 import com.example.london_live_bus_journey_tracker.presentation.components.LoadingState
 import com.example.london_live_bus_journey_tracker.presentation.components.MapBottomSheetScaffold
+import com.example.london_live_bus_journey_tracker.presentation.components.SimpleLocationMap
 import com.example.london_live_bus_journey_tracker.ui.theme.LightGray
 import com.example.london_live_bus_journey_tracker.ui.theme.Spacing
 import com.example.london_live_bus_journey_tracker.ui.theme.TextPrimary
@@ -58,7 +59,7 @@ fun JourneyResultsScreen(
             )
         },
         mapContent = {
-            MapPlaceholder()
+            SimpleLocationMap()
         }
     )
 }
@@ -158,8 +159,14 @@ private fun JourneyOptionsList(
             )
         )
 
-        LazyColumn {
-            items(options, key = { "${it.lineId}_${it.viaDescription}" }) { option ->
+        LazyColumn(
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = Spacing.extraLarge)
+        ) {
+            items(
+                count = options.size,
+                key = { index -> "${options[index].lineId}_${index}" }
+            ) { index ->
+                val option = options[index]
                 JourneyOptionCard(
                     routeNumber = option.routeNumber,
                     viaDescription = option.viaDescription,
@@ -169,13 +176,4 @@ private fun JourneyOptionsList(
             }
         }
     }
-}
-
-@Composable
-private fun MapPlaceholder(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(LightGray)
-    )
 }

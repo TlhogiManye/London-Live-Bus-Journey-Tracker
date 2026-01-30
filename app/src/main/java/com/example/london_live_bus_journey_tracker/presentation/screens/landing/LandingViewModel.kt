@@ -27,19 +27,26 @@ class LandingViewModel @Inject constructor() : ViewModel() {
 
     private fun loadRecentSearches() {
         // TODO: Replace with Room/DataStore implementation
+        // Using ICS codes for journey planning compatibility
+        // Victoria Station: 1000248, Oxford Circus: 1000173
+        // Paddington Station: 1000174, Liverpool Street: 1000138
         val mockSearches = listOf(
             RecentSearch(
                 id = "1",
-                fromName = "Victoria",
-                toName = "Oxford St",
+                fromId = "1000248",  // Victoria Station ICS code
+                fromName = "Victoria Station",
+                toId = "1000173",    // Oxford Circus ICS code
+                toName = "Oxford Circus",
                 routeNumber = "24",
                 viaDescription = "Bus via Pimlico",
                 durationMinutes = 25
             ),
             RecentSearch(
                 id = "2",
-                fromName = "Paddington",
-                toName = "Liverpool St",
+                fromId = "1000174",  // Paddington Station ICS code
+                fromName = "Paddington Station",
+                toId = "1000138",    // Liverpool Street ICS code
+                toName = "Liverpool Street",
                 routeNumber = "38",
                 viaDescription = "Bus via Notting Hill",
                 durationMinutes = 30

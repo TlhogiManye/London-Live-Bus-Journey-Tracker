@@ -3,10 +3,10 @@ package com.example.london_live_bus_journey_tracker.di
 import com.example.london_live_bus_journey_tracker.data.mapper.TflMapper
 import com.example.london_live_bus_journey_tracker.data.remote.api.TflApiService
 import com.example.london_live_bus_journey_tracker.data.repository.BusRepositoryImpl
+import com.example.london_live_bus_journey_tracker.data.repository.JourneyRepositoryImpl
 import com.example.london_live_bus_journey_tracker.data.repository.LocationRepositoryImpl
 import com.example.london_live_bus_journey_tracker.domain.repository.BusRepository
 import com.example.london_live_bus_journey_tracker.domain.repository.JourneyRepository
-import com.example.london_live_bus_journey_tracker.domain.repository.JourneyRepositoryImpl
 import com.example.london_live_bus_journey_tracker.domain.repository.LocationRepository
 import dagger.Module
 import dagger.Provides

@@ -23,7 +23,8 @@ data class StopPointSearchResponse(
 /**
  * Individual stop point match from search results.
  *
- * @property id Unique identifier for the stop point (e.g., "940GZZLUVIC")
+ * @property id Unique identifier for the stop point (NaPTAN ID e.g., "940GZZLUVIC")
+ * @property icsId ICS code for journey planner (e.g., "1000248") - preferred for Journey API
  * @property name Human-readable name (e.g., "Victoria Station")
  * @property lat Latitude coordinate
  * @property lon Longitude coordinate
@@ -34,6 +35,9 @@ data class StopPointSearchResponse(
 data class StopPointMatchDto(
     @SerialName("id")
     val id: String,
+
+    @SerialName("icsId")
+    val icsId: String? = null,
 
     @SerialName("name")
     val name: String,

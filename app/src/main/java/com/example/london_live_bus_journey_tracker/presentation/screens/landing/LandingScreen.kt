@@ -1,10 +1,8 @@
 package com.example.london_live_bus_journey_tracker.presentation.screens.landing
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -25,7 +23,7 @@ import com.example.london_live_bus_journey_tracker.domain.model.RecentSearch
 import com.example.london_live_bus_journey_tracker.presentation.components.LandingSearchBar
 import com.example.london_live_bus_journey_tracker.presentation.components.MapBottomSheetScaffold
 import com.example.london_live_bus_journey_tracker.presentation.components.RouteHistoryCard
-import com.example.london_live_bus_journey_tracker.ui.theme.LightGray
+import com.example.london_live_bus_journey_tracker.presentation.components.SimpleLocationMap
 import com.example.london_live_bus_journey_tracker.ui.theme.Spacing
 import com.example.london_live_bus_journey_tracker.ui.theme.TextSecondary
 
@@ -47,7 +45,8 @@ fun LandingScreen(
             )
         },
         mapContent = {
-            MapPlaceholder()
+            // Show London center map
+            SimpleLocationMap()
         }
     )
 }
@@ -80,7 +79,9 @@ private fun LandingSheetContent(
 
             Spacer(modifier = Modifier.height(Spacing.small))
 
-            LazyColumn {
+            LazyColumn(
+                contentPadding = PaddingValues(bottom = Spacing.extraLarge)
+            ) {
                 items(recentSearches, key = { it.id }) { search ->
                     RouteHistoryCard(
                         routeNumber = search.routeNumber,
@@ -91,19 +92,5 @@ private fun LandingSheetContent(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun MapPlaceholder(
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(LightGray)
-    ) {
-        // Google Maps will be integrated here
-        // For now just show a placeholder background
     }
 }

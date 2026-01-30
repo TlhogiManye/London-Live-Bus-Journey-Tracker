@@ -10,16 +10,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,12 +41,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.london_live_bus_journey_tracker.R
@@ -53,11 +56,11 @@ import com.example.london_live_bus_journey_tracker.ui.theme.CornerRadius
 import com.example.london_live_bus_journey_tracker.ui.theme.IconSize
 import com.example.london_live_bus_journey_tracker.ui.theme.MediumGray
 import com.example.london_live_bus_journey_tracker.ui.theme.Spacing
+import com.example.london_live_bus_journey_tracker.ui.theme.TextOnYellow
 import com.example.london_live_bus_journey_tracker.ui.theme.TextPrimary
 import com.example.london_live_bus_journey_tracker.ui.theme.TextSecondary
 import com.example.london_live_bus_journey_tracker.ui.theme.TextTertiary
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun SearchScreen(
     onBackClick: () -> Unit,
@@ -70,10 +73,12 @@ fun SearchScreen(
     val fromFocusRequester = remember { FocusRequester() }
     val toFocusRequester = remember { FocusRequester() }
 
+    // Auto-focus the from field on launch
     LaunchedEffect(Unit) {
         fromFocusRequester.requestFocus()
     }
 
+    // Move focus to "To" field when "From" is selected
     LaunchedEffect(uiState.activeField) {
         when (uiState.activeField) {
             ActiveField.TO -> toFocusRequester.requestFocus()
@@ -81,80 +86,146 @@ fun SearchScreen(
         }
     }
 
-    LaunchedEffect(uiState.fromLocation, uiState.toLocation) {
-        val from = uiState.fromLocation
-        val to = uiState.toLocation
-        if (from != null && to != null) {
-            onSearchComplete(from.id, from.name, to.id, to.name)
-        }
-    }
+    // Check if search can be performed
+    val canSearch = uiState.fromLocation != null && uiState.toLocation != null
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            SearchHeader(
-                onBackClick = {
-                    keyboardController?.hide()
-                    onBackClick()
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = ComponentSize.buttonHeight + Spacing.extraLarge + Spacing.default)
+            ) {
+                // Header with back button
+                SearchHeader(
+                    onBackClick = {
+                        keyboardController?.hide()
+                        onBackClick()
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(Spacing.medium))
+
+                // Search input fields
+                Column(modifier = Modifier.padding(horizontal = Spacing.default)) {
+                    FloatingLabelTextField(
+                        value = uiState.fromText,
+                        onValueChange = viewModel::onFromTextChanged,
+                        label = stringResource(R.string.label_from),
+                        isFocused = uiState.activeField == ActiveField.FROM,
+                        onFocusChange = { focused ->
+                            if (focused) viewModel.onFromFocused()
+                        },
+                        onClear = if (uiState.fromText.isNotEmpty()) viewModel::onClearFrom else null,
+                        focusRequester = fromFocusRequester,
+                        imeAction = ImeAction.Next,
+                        onNext = { toFocusRequester.requestFocus() }
+                    )
+
+                    Spacer(modifier = Modifier.height(Spacing.default))
+
+                    FloatingLabelTextField(
+                        value = uiState.toText,
+                        onValueChange = viewModel::onToTextChanged,
+                        label = stringResource(R.string.label_to),
+                        isFocused = uiState.activeField == ActiveField.TO,
+                        onFocusChange = { focused ->
+                            if (focused) viewModel.onToFocused()
+                        },
+                        onClear = if (uiState.toText.isNotEmpty()) viewModel::onClearTo else null,
+                        focusRequester = toFocusRequester,
+                        imeAction = ImeAction.Done,
+                        onDone = {
+                            keyboardController?.hide()
+                        }
+                    )
                 }
-            )
 
-            Spacer(modifier = Modifier.height(Spacing.default))
+                Spacer(modifier = Modifier.height(Spacing.large))
 
-            Column(modifier = Modifier.padding(horizontal = Spacing.default)) {
-                FloatingLabelTextField(
-                    value = uiState.fromText,
-                    onValueChange = viewModel::onFromTextChanged,
-                    label = stringResource(R.string.label_from),
-                    isFocused = uiState.activeField == ActiveField.FROM,
-                    onFocusChange = { focused ->
-                        if (focused) viewModel.onFromFocused()
-                    },
-                    onClear = if (uiState.fromText.isNotEmpty()) viewModel::onClearFrom else null,
-                    focusRequester = fromFocusRequester,
-                    imeAction = ImeAction.Next,
-                    onNext = { toFocusRequester.requestFocus() }
-                )
+                // Show loading indicator when searching
+                if (uiState.isSearching) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(Spacing.default),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = BusYellow,
+                            strokeWidth = 2.dp
+                        )
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(Spacing.default))
+                // Suggestions or Recent Searches
+                val showSuggestions = uiState.suggestions.isNotEmpty()
+                val showRecentSearches = !showSuggestions &&
+                        uiState.fromText.isEmpty() &&
+                        uiState.toText.isEmpty() &&
+                        uiState.recentSearches.isNotEmpty()
 
-                FloatingLabelTextField(
-                    value = uiState.toText,
-                    onValueChange = viewModel::onToTextChanged,
-                    label = stringResource(R.string.label_to),
-                    isFocused = uiState.activeField == ActiveField.TO,
-                    onFocusChange = { focused ->
-                        if (focused) viewModel.onToFocused()
-                    },
-                    onClear = if (uiState.toText.isNotEmpty()) viewModel::onClearTo else null,
-                    focusRequester = toFocusRequester,
-                    imeAction = ImeAction.Done,
-                    onDone = { }
-                )
+                when {
+                    showSuggestions -> {
+                        SuggestionsSection(
+                            suggestions = uiState.suggestions,
+                            onSuggestionClick = viewModel::onSuggestionSelected,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    showRecentSearches -> {
+                        RecentSearchesSection(
+                            recentSearches = uiState.recentSearches,
+                            onRecentSearchClick = viewModel::onRecentSearchSelected,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    else -> {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(Spacing.large))
-
-            val showSuggestions = uiState.suggestions.isNotEmpty()
-            val showRecentSearches = !showSuggestions &&
-                    uiState.fromText.isEmpty() &&
-                    uiState.recentSearches.isNotEmpty()
-
-            when {
-                showSuggestions -> {
-                    SuggestionsSection(
-                        suggestions = uiState.suggestions,
-                        onSuggestionClick = viewModel::onSuggestionSelected
-                    )
-                }
-                showRecentSearches -> {
-                    RecentSearchesSection(
-                        recentSearches = uiState.recentSearches,
-                        onRecentSearchClick = viewModel::onRecentSearchSelected
-                    )
-                }
+            // Search Button at the bottom
+            Button(
+                onClick = {
+                    keyboardController?.hide()
+                    val from = uiState.fromLocation
+                    val to = uiState.toLocation
+                    if (from != null && to != null) {
+                        onSearchComplete(
+                            from.effectiveJourneyId,
+                            from.name,
+                            to.effectiveJourneyId,
+                            to.name
+                        )
+                    }
+                },
+                enabled = canSearch,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = Spacing.default)
+                    .padding(bottom = Spacing.extraLarge)
+                    .imePadding()
+                    .height(ComponentSize.buttonHeight),
+                shape = RoundedCornerShape(CornerRadius.medium),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = BusYellow,
+                    contentColor = TextOnYellow,
+                    disabledContainerColor = MediumGray,
+                    disabledContentColor = TextTertiary
+                )
+            ) {
+                Text(
+                    text = stringResource(R.string.search_button),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }
@@ -171,7 +242,7 @@ private fun SearchHeader(
             .padding(
                 start = Spacing.small,
                 end = Spacing.default,
-                top = Spacing.large,
+                top = Spacing.extraLarge + Spacing.medium,
                 bottom = Spacing.small
             ),
         verticalAlignment = Alignment.CenterVertically
@@ -188,8 +259,8 @@ private fun SearchHeader(
 
         Text(
             text = stringResource(R.string.search_address_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
             color = TextPrimary
         )
     }
@@ -267,6 +338,7 @@ private fun FloatingLabelTextField(
             }
         }
 
+        // Floating label
         if (isFocused || value.isNotEmpty()) {
             Text(
                 text = label,
@@ -302,6 +374,7 @@ private fun SuggestionsSection(
         Text(
             text = stringResource(R.string.suggestions_header),
             style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
             color = TextSecondary,
             modifier = Modifier.padding(horizontal = Spacing.default)
         )
@@ -309,7 +382,11 @@ private fun SuggestionsSection(
         Spacer(modifier = Modifier.height(Spacing.small))
 
         LazyColumn {
-            items(suggestions, key = { it.id }) { location ->
+            // Use itemsIndexed with index as part of key to ensure uniqueness
+            itemsIndexed(
+                items = suggestions,
+                key = { index, location -> "${location.id}_$index" }
+            ) { _, location ->
                 SuggestionItem(
                     location = location,
                     onClick = { onSuggestionClick(location) }
@@ -339,7 +416,7 @@ private fun SuggestionItem(
             painter = painterResource(id = R.drawable.ic_location_pin),
             contentDescription = null,
             modifier = Modifier.size(IconSize.default),
-            tint = TextSecondary
+            tint = BusYellow
         )
 
         Spacer(modifier = Modifier.width(Spacing.medium))
@@ -352,11 +429,19 @@ private fun SuggestionItem(
                 color = TextPrimary
             )
 
-            Text(
-                text = stringResource(R.string.location_united_kingdom),
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
-            )
+            if (location.address.isNotEmpty()) {
+                Text(
+                    text = location.address,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            } else {
+                Text(
+                    text = stringResource(R.string.location_united_kingdom),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            }
         }
     }
 }
@@ -371,6 +456,7 @@ private fun RecentSearchesSection(
         Text(
             text = stringResource(R.string.recent_searches_header),
             style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
             color = TextSecondary,
             modifier = Modifier.padding(horizontal = Spacing.default)
         )
@@ -378,7 +464,10 @@ private fun RecentSearchesSection(
         Spacer(modifier = Modifier.height(Spacing.small))
 
         LazyColumn {
-            items(recentSearches, key = { it.displayText }) { search ->
+            itemsIndexed(
+                items = recentSearches,
+                key = { index, search -> "${search.displayText}_$index" }
+            ) { _, search ->
                 RecentSearchItem(
                     recentSearch = search,
                     onClick = { onRecentSearchClick(search) }

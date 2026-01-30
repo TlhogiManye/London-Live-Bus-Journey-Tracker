@@ -27,11 +27,34 @@ class TflMapper @Inject constructor() {
 
     /**
      * Maps a stop point DTO to a Location domain model.
+     *
+     * Uses the original NaPTAN id for uniqueness (used as key in lists),
+     * and icsId as the journey ID for the Journey Planner API.
      */
     fun mapToLocation(dto: StopPointMatchDto): Location {
+        // Use icsId for journey planning, fall back to coordinates, then original id
+        val journeyId = when {
+            !dto.icsId.isNullOrBlank() -> dto.icsId
+            dto.lat != null && dto.lon != null -> "${dto.lat},${dto.lon}"
+            else -> dto.id
+        }
+
+        // Build address from available info
+        val address = buildString {
+            if (dto.modes.isNotEmpty()) {
+                append(dto.modes.joinToString(", ") { it.replaceFirstChar { c -> c.uppercase() } })
+            }
+            if (!dto.zone.isNullOrBlank()) {
+                if (isNotEmpty()) append(" • ")
+                append("Zone ${dto.zone}")
+            }
+        }
+
         return Location(
-            id = dto.id,
+            id = dto.id,  // Keep original NaPTAN ID for uniqueness
+            journeyId = journeyId,  // ICS code for journey planning
             name = dto.name,
+            address = address,
             type = LocationType.STOP_POINT,
             lat = dto.lat,
             lon = dto.lon,
@@ -62,13 +85,13 @@ class TflMapper @Inject constructor() {
         } ?: return null
 
         // Extract line information
-        val routeOption = busLeg.routeOptions.firstOrNull()
-        val lineId = routeOption?.lineIdentifier?.id
-            ?: routeOption?.id
+        val routeOption = busLeg.routeOptions.firstOrNull() ?: return null
+        val lineId = routeOption.lineIdentifier?.id
+            ?: routeOption.id
             ?: return null
 
-        val lineName = routeOption?.lineIdentifier?.name
-            ?: routeOption?.name
+        val lineName = routeOption.lineIdentifier?.name
+            ?: routeOption.name
             ?: lineId
 
         // Build via description

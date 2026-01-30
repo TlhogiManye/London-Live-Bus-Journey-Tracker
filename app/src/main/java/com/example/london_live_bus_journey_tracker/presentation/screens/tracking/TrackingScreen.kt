@@ -1,5 +1,7 @@
 package com.example.london_live_bus_journey_tracker.presentation.screens.tracking
 
+import BusMarker
+import StopMarker
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,17 +32,18 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.london_live_bus_journey_tracker.R
+import com.example.london_live_bus_journey_tracker.presentation.components.BusTrackerMap
 import com.example.london_live_bus_journey_tracker.presentation.components.ErrorState
 import com.example.london_live_bus_journey_tracker.presentation.components.LoadingState
 import com.example.london_live_bus_journey_tracker.presentation.components.MapBottomSheetScaffold
 import com.example.london_live_bus_journey_tracker.ui.theme.BusYellow
 import com.example.london_live_bus_journey_tracker.ui.theme.ComponentSize
 import com.example.london_live_bus_journey_tracker.ui.theme.CornerRadius
-import com.example.london_live_bus_journey_tracker.ui.theme.LightGray
 import com.example.london_live_bus_journey_tracker.ui.theme.Spacing
 import com.example.london_live_bus_journey_tracker.ui.theme.TextOnYellow
 import com.example.london_live_bus_journey_tracker.ui.theme.TextPrimary
 import com.example.london_live_bus_journey_tracker.ui.theme.TextSecondary
+import com.google.android.gms.maps.model.LatLng
 
 @Composable
 fun TrackingScreen(
@@ -71,8 +75,49 @@ fun TrackingScreen(
             )
         },
         mapContent = {
-            MapPlaceholder()
+            TrackingMapContent(uiState = uiState)
         }
+    )
+}
+
+@Composable
+private fun TrackingMapContent(
+    uiState: TrackingUiState,
+    modifier: Modifier = Modifier
+) {
+    // Convert UI state to map markers
+    val busMarker = remember(uiState.busPosition, uiState.vehicleId, uiState.lineName) {
+        uiState.busPosition?.let { pos ->
+            BusMarker(
+                vehicleId = uiState.vehicleId,
+                position = LatLng(pos.lat, pos.lon),
+                title = "Bus ${uiState.lineName}"
+            )
+        }
+    }
+
+    val stopMarkers = remember(uiState.routeStops) {
+        uiState.routeStops.map { stop ->
+            StopMarker(
+                id = stop.naptanId,
+                name = stop.name,
+                position = LatLng(stop.lat, stop.lon),
+                isCurrentStop = stop.isCurrentStop
+            )
+        }
+    }
+
+    val routePath = remember(uiState.routeStops) {
+        uiState.routeStops.map { stop ->
+            LatLng(stop.lat, stop.lon)
+        }
+    }
+
+    BusTrackerMap(
+        modifier = modifier,
+        busMarker = busMarker,
+        stopMarkers = stopMarkers,
+        routePath = routePath
     )
 }
 
@@ -82,7 +127,11 @@ private fun TrackingSheetContent(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = Spacing.extraLarge)
+    ) {
         Text(
             text = stringResource(R.string.trip),
             style = MaterialTheme.typography.headlineSmall,
@@ -193,13 +242,4 @@ private fun TripTimeBadge(
             )
         }
     }
-}
-
-@Composable
-private fun MapPlaceholder(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(LightGray)
-    )
 }
